@@ -1,0 +1,68 @@
+name: Verify & Build CI
+
+on:
+  push:
+    branches: [ main, master, staging ]
+  pull_request:
+    branches: [ main, master, staging ]
+
+jobs:
+  backend-test:
+    name: Backend Test Suite
+    runs-on: ubuntu-latest
+
+    services:
+      mongodb:
+        image: mongo:6.0
+        ports:
+          - 27017:27017
+
+    steps:
+      - name: Checkout Codebase
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install Dependencies
+        run: |
+          cd backend
+          npm ci
+
+      - name: Run Integration Tests
+        env:
+          NODE_ENV: test
+          JWT_SECRET: ci-very-secure-test-token-secret-key-12345
+          MONGO_URI: mongodb://localhost:27017/softwraith_test
+        run: |
+          cd backend
+          npm test
+
+  frontend-build:
+    name: Frontend Vite Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Codebase
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install Dependencies
+        run: |
+          cd frontend
+          npm ci
+
+      - name: Build Assets
+        run: |
+          cd frontend
+          npm run build
